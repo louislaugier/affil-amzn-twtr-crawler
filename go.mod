@@ -1,4 +1,4 @@
-module github.com/louislaugier/amazon-deals-crawler
+module github.com/louislaugier/affil-amzn-twtr-crawler
 
 go 1.15
 
