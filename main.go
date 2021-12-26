@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// copy raw JSON structure from Amazon Deals page scrap
 type rawDealList struct {
 	PrefetchedData struct {
 		AapiGetDealsList []struct {
@@ -51,6 +51,7 @@ type rawDealList struct {
 	} `json:"prefetchedData"`
 }
 
+// formatted deal structure ready for tweet
 type deal struct {
 	ID       string
 	Title    string
@@ -95,31 +96,30 @@ func getDeals(c *colly.Collector) {
 			days, hours, minutes, seconds := "", "", "", ""
 			if tLeft >= 86400 {
 				d := int(tLeft) / 86400
-				days = strconv.Itoa(d) + " days "
+				days = strconv.Itoa(d) + " day(s) "
 				tLeft -= int64(86400 * d)
 			}
 			if tLeft >= 3600 {
 				h := int(tLeft) / 3600
-				hours = strconv.Itoa(h) + " hours "
+				hours = strconv.Itoa(h) + " hour(s) "
 				tLeft -= int64(3600 * h)
 			}
 			if tLeft >= 60 {
 				m := int(tLeft) / 60
-				minutes = strconv.Itoa(m) + " minutes "
+				minutes = strconv.Itoa(m) + " minute(s) "
 				tLeft -= int64(60 * m)
 			}
 			if tLeft > 0 {
-				seconds = strconv.Itoa(int(tLeft)) + " seconds "
+				seconds = strconv.Itoa(int(tLeft)) + " second(s) "
 			}
 			d.TimeLeft = days + hours + minutes + seconds
 
 			deals = append(deals, d)
 		}
 
-		// if csv file doesn't exist, create it and write slice of deals to it
+		// if CSV file doesn't exist, create it and write slice of deals to it
 		rows := [][]string{}
 		f, err := os.Open("products.csv")
-		defer f.Close()
 		if err != nil {
 			rows, _ = struct2csv.New().Marshal(deals)
 			f, _ = os.Create("products.csv")
@@ -129,8 +129,10 @@ func getDeals(c *colly.Collector) {
 		} else {
 			rows, _ = csv.NewReader(f).ReadAll()
 		}
+		defer f.Close()
 
-		// for each deal, if one is not in CSV (check ID), add it to csv and tweet all its info
+		// for each deal, if one is not in CSV, tweet all its info
+		prevLen := len(rows)
 		for _, d := range deals {
 			found := false
 			for i, r := range rows {
@@ -139,14 +141,20 @@ func getDeals(c *colly.Collector) {
 				}
 			}
 			if !found {
-				w := csv.NewWriter(f)
-				w.Write([]string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
-				// tweet
-				fmt.Println("- Needs add to csv: ", d.Title)
+				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
+				// tweet it
+				// https://developer.twitter.com/en/portal/products
 			}
 		}
 
-		// https://developer.twitter.com/en/portal/products
+		// if new rows recreate CSV
+		if len(rows) > prevLen {
+			os.Remove("products.csv")
+			f, _ = os.Create("products.csv")
+			defer f.Close()
+			w := csv.NewWriter(f)
+			w.WriteAll(rows)
+		}
 	})
 
 	c.OnRequest(func(r *colly.Request) {
@@ -157,13 +165,16 @@ func getDeals(c *colly.Collector) {
 }
 
 func main() {
-	// load .env
-	if err := godotenv.Load(); err != nil {
-		panic(err)
+	// if no env variables, load .env file
+	if os.Getenv("AMAZON_AFFILIATE_TAG") == "" {
+		if err := godotenv.Load(); err != nil {
+			panic(err)
+		}
 	}
 
-	// routine to check every 15 mins
+	// add routine to check every 15 mins
 	c := colly.NewCollector()
 	getDeals(c)
-	// follow/unfollow bot
+
+	// add follow/unfollow bot
 }
