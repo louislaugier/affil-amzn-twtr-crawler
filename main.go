@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dghubble/oauth1"
 	"github.com/dnlo/struct2csv"
 	colly "github.com/gocolly/colly/v2"
 	"github.com/joho/godotenv"
@@ -64,7 +66,6 @@ type deal struct {
 
 // get deal list
 func getDeals(c *colly.Collector) {
-
 	// on Amazon Deals page load
 	c.OnHTML("html", func(e *colly.HTMLElement) {
 		deals := []deal{}
@@ -114,7 +115,7 @@ func getDeals(c *colly.Collector) {
 				tLeft -= int64(60 * m)
 			}
 			if tLeft > 0 {
-				seconds = strconv.Itoa(int(tLeft)) + " second(s) "
+				seconds = strconv.Itoa(int(tLeft)) + " second(s)"
 			}
 			d.TimeLeft = days + hours + minutes + seconds
 
@@ -123,10 +124,10 @@ func getDeals(c *colly.Collector) {
 
 		// if CSV file doesn't exist, create it and write slice of deals to it
 		rows := [][]string{}
-		f, err := os.Open("products.csv")
+		f, err := os.Open("latest_products.csv")
 		if err != nil {
 			rows, _ = struct2csv.New().Marshal(deals)
-			f, _ = os.Create("products.csv")
+			f, _ = os.Create("latest_products.csv")
 			defer f.Close()
 			w := csv.NewWriter(f)
 			w.WriteAll(rows)
@@ -146,15 +147,24 @@ func getDeals(c *colly.Collector) {
 			}
 			if !found {
 				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
-				// tweet it
-				// https://developer.twitter.com/en/portal/products
+
+				// tweet about the deal
+				dealRange := ` Deals going from $` + strconv.FormatFloat(d.MinPrice, 'f', -1, 64) + ` to $` + strconv.FormatFloat(d.MaxPrice, 'f', -1, 64) + `.`
+				if d.MinPrice == 0 || d.MaxPrice == 0 {
+					dealRange = ""
+				}
+				config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
+				token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
+				httpClient := config.Client(oauth1.NoContext, token)
+				resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`"}`)))
+				defer resp.Body.Close()
 			}
 		}
 
-		// if new rows recreate CSV
+		// if new rows, recreate CSV
 		if len(rows) > prevLen {
-			os.Remove("products.csv")
-			f, _ = os.Create("products.csv")
+			os.Remove("latest_products.csv")
+			f, _ = os.Create("latest_products.csv")
 			defer f.Close()
 			w := csv.NewWriter(f)
 			w.WriteAll(rows)
@@ -176,9 +186,9 @@ func main() {
 		}
 	}
 
-	// add routine to check for new deals every 15 mins
+	// create scraper and get latest deals
 	c := colly.NewCollector()
 	getDeals(c)
 
-	// add follow / unfollow bot
+	// add heroku scheduler + follow / unfollow bot
 }
