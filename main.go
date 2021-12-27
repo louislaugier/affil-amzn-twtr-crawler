@@ -190,5 +190,5 @@ func main() {
 	c := colly.NewCollector()
 	getDeals(c)
 
-	// add heroku scheduler + follow / unfollow bot + factorize code
+	// factorize code + clean heroku accounts + add env vars & scheduler + follow / unfollow bot
 }
