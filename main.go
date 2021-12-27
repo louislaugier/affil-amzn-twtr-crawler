@@ -85,7 +85,7 @@ func getDeals(c *colly.Collector) {
 			d.Title = v.Entity.Details.Entity.Title
 			d.MinPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Range.Min.Amount, 64)
 			d.MaxPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Range.Max.Amount, 64)
-			d.URL = "https://www.amazon.com/deal/" + v.Entity.ID + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG")
+			d.URL = "https://www.amazon.com/deal/" + v.Entity.ID
 
 			switch v.Entity.Details.Entity.Type {
 			case "DEAL_OF_THE_DAY":
@@ -156,7 +156,7 @@ func getDeals(c *colly.Collector) {
 				config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
 				token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
 				httpClient := config.Client(oauth1.NoContext, token)
-				resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`"}`)))
+				resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`?tag=`+os.Getenv("AMAZON_AFFILIATE_TAG")+`"}`)))
 				defer resp.Body.Close()
 			}
 		}
