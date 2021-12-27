@@ -62,10 +62,13 @@ type deal struct {
 	TimeLeft string
 }
 
+// get deal list
 func getDeals(c *colly.Collector) {
-	deals := []deal{}
 
+	// on Amazon Deals page load
 	c.OnHTML("html", func(e *colly.HTMLElement) {
+		deals := []deal{}
+
 		// format products raw HTML into JSON string
 		str := strings.Replace(strings.Replace(strings.Split(strings.Split(strings.Split(e.Text, "window.P.when('DealsWidgetsHorizonteAssets').execute(function (assets) {")[1], "});")[0], "assets.mountWidget('slot-15', ")[1], "\n", "", -1), ")            ", "", -1)
 
@@ -92,6 +95,7 @@ func getDeals(c *colly.Collector) {
 				d.Type = "Best Deal"
 			}
 
+			// compute remaining time for current deal
 			tLeft := v.Entity.Details.Entity.EndTime.Value.Unix() - time.Now().Unix()
 			days, hours, minutes, seconds := "", "", "", ""
 			if tLeft >= 86400 {
@@ -165,16 +169,16 @@ func getDeals(c *colly.Collector) {
 }
 
 func main() {
-	// if no env variables, load .env file
+	// if no Amazon affiliate tag env variable found, load .env file
 	if os.Getenv("AMAZON_AFFILIATE_TAG") == "" {
 		if err := godotenv.Load(); err != nil {
 			panic(err)
 		}
 	}
 
-	// add routine to check every 15 mins
+	// add routine to check for new deals every 15 mins
 	c := colly.NewCollector()
 	getDeals(c)
 
-	// add follow/unfollow bot
+	// add follow / unfollow bot
 }
