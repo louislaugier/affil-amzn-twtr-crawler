@@ -122,7 +122,7 @@ func getDeals(c *colly.Collector) {
 			deals = append(deals, d)
 		}
 
-		// if CSV file doesn't exist, create it and write slice of deals to it
+		// if CSV file doesn't exist, create it and write the slice of deals to it
 		rows := [][]string{}
 		f, err := os.Open("latest_products.csv")
 		if err != nil {
@@ -190,5 +190,5 @@ func main() {
 	c := colly.NewCollector()
 	getDeals(c)
 
-	// add heroku scheduler + follow / unfollow bot
+	// add heroku scheduler + follow / unfollow bot + factorize code
 }
