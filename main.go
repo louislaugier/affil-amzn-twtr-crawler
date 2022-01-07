@@ -190,5 +190,6 @@ func main() {
 	c := colly.NewCollector()
 	getDeals(c)
 
-	// factorize code & scale for other amazon categories + clean heroku accounts & add env vars & scheduler + follow / unfollow bot
+	// follow / unfollow bot
+	// factorize code & scale for other amazon categories +
 }
