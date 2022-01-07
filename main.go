@@ -191,5 +191,5 @@ func main() {
 	getDeals(c)
 
 	// follow / unfollow bot
-	// factorize code & scale for other amazon categories +
+	// factorize & scale for other categories
 }
