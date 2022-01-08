@@ -15,6 +15,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var csvFile = "latest_products.csv"
+
 // copy raw JSON structure from Amazon Deals page scrap
 type rawDealList struct {
 	PrefetchedData struct {
@@ -27,12 +29,14 @@ type rawDealList struct {
 							Price struct {
 								Details struct {
 									Savings struct {
-										Value int `json:"value"` // ici
+										Percentage struct {
+											Value int `json:"value"`
+										} `json:"percentage"`
 									} `json:"savings"`
 									DealPrice struct {
 										MoneyValueOrRange struct {
 											Value struct {
-												Amount string `json:"amount"` // ici
+												Amount string `json:"amount"`
 											} `json:"value"`
 											Range struct {
 												Min struct {
@@ -66,7 +70,7 @@ type deal struct {
 	MinPrice           float64
 	MaxPrice           float64
 	DiscountPercentage int
-	NewPrice           int
+	NewPrice           float64
 	URL                string
 	Type               string
 	TimeLeft           string
@@ -94,8 +98,8 @@ func getDeals(time.Time) {
 			d.Title = v.Entity.Details.Entity.Title
 			d.MinPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Range.Min.Amount, 64)
 			d.MaxPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Range.Max.Amount, 64)
-			d.DiscountPercentage = v.Entity.Details.Entity.Price.Details.Savings.Value
-			d.NewPrice, _ = strconv.Atoi(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Value.Amount)
+			d.DiscountPercentage = v.Entity.Details.Entity.Price.Details.Savings.Percentage.Value
+			d.NewPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Value.Amount, 64)
 			d.URL = "https://www.amazon.com/deal/" + v.Entity.ID
 
 			switch v.Entity.Details.Entity.Type {
@@ -135,10 +139,10 @@ func getDeals(time.Time) {
 
 		// if CSV file doesn't exist, create it and write the slice of deals to it
 		rows := [][]string{}
-		f, err := os.Open("latest_products.csv")
+		f, err := os.Open(csvFile)
 		if err != nil {
 			rows, _ = struct2csv.New().Marshal(deals)
-			f, _ = os.Create("latest_products.csv")
+			f, _ = os.Create(csvFile)
 			defer f.Close()
 			w := csv.NewWriter(f)
 			w.WriteAll(rows)
@@ -157,10 +161,10 @@ func getDeals(time.Time) {
 				}
 			}
 			if !found {
-				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
+				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
 				// tweet about the deal
-				dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.Itoa(d.NewPrice) + " only for "
+				dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only. "
 				if d.DiscountPercentage == 0 || d.NewPrice == 0 {
 					dealDiscount = ""
 				}
@@ -178,8 +182,8 @@ func getDeals(time.Time) {
 
 		// if new rows, recreate CSV
 		if len(rows) > prevLen {
-			os.Remove("latest_products.csv")
-			f, _ = os.Create("latest_products.csv")
+			os.Remove(csvFile)
+			f, _ = os.Create(csvFile)
 			defer f.Close()
 			w := csv.NewWriter(f)
 			w.WriteAll(rows)
