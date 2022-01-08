@@ -164,8 +164,8 @@ func getDeals(time.Time) {
 				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
 				// tweet about the deal
-				dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only. "
-				if d.DiscountPercentage == 0 || d.NewPrice == 0 {
+				dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only for "
+				if d.DiscountPercentage == 0 || d.NewPrice == 0 || strings.Contains(d.Title, "%") {
 					dealDiscount = ""
 				}
 				dealRange := " Deals going from $" + strconv.FormatFloat(d.MinPrice, 'f', -1, 64) + " to $" + strconv.FormatFloat(d.MaxPrice, 'f', -1, 64) + "."
