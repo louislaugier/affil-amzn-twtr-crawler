@@ -2,3 +2,5 @@
 tmp
 
 .env
+example.json
+latest_products.csv
