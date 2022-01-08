@@ -207,6 +207,8 @@ func main() {
 		}
 	}
 
+	getDeals(time.Time{})
+
 	// create scraper and get latest deals
 	refreshDeals(15*time.Minute, getDeals)
 
