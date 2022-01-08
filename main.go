@@ -26,8 +26,14 @@ type rawDealList struct {
 						Entity struct {
 							Price struct {
 								Details struct {
+									Savings struct {
+										Value int `json:"value"` // ici
+									} `json:"savings"`
 									DealPrice struct {
 										MoneyValueOrRange struct {
+											Value struct {
+												Amount string `json:"amount"` // ici
+											} `json:"value"`
 											Range struct {
 												Min struct {
 													Amount string `json:"amount"`
@@ -55,13 +61,15 @@ type rawDealList struct {
 
 // formatted deal structure ready for tweet
 type deal struct {
-	ID       string
-	Title    string
-	MinPrice float64
-	MaxPrice float64
-	URL      string
-	Type     string
-	TimeLeft string
+	ID                 string
+	Title              string
+	MinPrice           float64
+	MaxPrice           float64
+	DiscountPercentage int
+	NewPrice           int
+	URL                string
+	Type               string
+	TimeLeft           string
 }
 
 // get deal list
@@ -86,6 +94,8 @@ func getDeals(time.Time) {
 			d.Title = v.Entity.Details.Entity.Title
 			d.MinPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Range.Min.Amount, 64)
 			d.MaxPrice, _ = strconv.ParseFloat(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Range.Max.Amount, 64)
+			d.DiscountPercentage = v.Entity.Details.Entity.Price.Details.Savings.Value
+			d.NewPrice, _ = strconv.Atoi(v.Entity.Details.Entity.Price.Details.DealPrice.MoneyValueOrRange.Value.Amount)
 			d.URL = "https://www.amazon.com/deal/" + v.Entity.ID
 
 			switch v.Entity.Details.Entity.Type {
@@ -150,14 +160,18 @@ func getDeals(time.Time) {
 				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
 				// tweet about the deal
-				dealRange := ` Deals going from $` + strconv.FormatFloat(d.MinPrice, 'f', -1, 64) + ` to $` + strconv.FormatFloat(d.MaxPrice, 'f', -1, 64) + `.`
+				dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.Itoa(d.NewPrice) + " only for "
+				if d.DiscountPercentage == 0 || d.NewPrice == 0 {
+					dealDiscount = ""
+				}
+				dealRange := " Deals going from $" + strconv.FormatFloat(d.MinPrice, 'f', -1, 64) + " to $" + strconv.FormatFloat(d.MaxPrice, 'f', -1, 64) + "."
 				if d.MinPrice == 0 || d.MaxPrice == 0 {
 					dealRange = ""
 				}
 				config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
 				token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
 				httpClient := config.Client(oauth1.NoContext, token)
-				resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`?tag=`+os.Getenv("AMAZON_AFFILIATE_TAG")+`"}`)))
+				resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+dealDiscount+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`?tag=`+os.Getenv("AMAZON_AFFILIATE_TAG")+`"}`)))
 				defer resp.Body.Close()
 			}
 		}
@@ -179,9 +193,9 @@ func getDeals(time.Time) {
 	c.Visit("https://www.amazon.com/deals")
 }
 
-func refreshDeals(d time.Duration, f func(time.Time)) {
-	for x := range time.Tick(d) {
-		f(x)
+func refreshDeals(d time.Duration, refresh func(time.Time)) {
+	for tick := range time.Tick(d) {
+		refresh(tick)
 	}
 }
 
