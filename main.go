@@ -65,8 +65,9 @@ type deal struct {
 }
 
 // get deal list
-func getDeals(c *colly.Collector) {
+func getDeals(time.Time) {
 	// on Amazon Deals page load
+	c := colly.NewCollector()
 	c.OnHTML("html", func(e *colly.HTMLElement) {
 		deals := []deal{}
 
@@ -178,6 +179,12 @@ func getDeals(c *colly.Collector) {
 	c.Visit("https://www.amazon.com/deals")
 }
 
+func refreshDeals(d time.Duration, f func(time.Time)) {
+	for x := range time.Tick(d) {
+		f(x)
+	}
+}
+
 func main() {
 	// if no Amazon affiliate tag env variable found, load .env file
 	if os.Getenv("AMAZON_AFFILIATE_TAG") == "" {
@@ -187,8 +194,7 @@ func main() {
 	}
 
 	// create scraper and get latest deals
-	c := colly.NewCollector()
-	getDeals(c)
+	refreshDeals(15*time.Minute, getDeals)
 
 	// follow / unfollow bot
 	// factorize & scale for other categories
