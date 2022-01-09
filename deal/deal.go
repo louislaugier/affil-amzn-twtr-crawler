@@ -168,7 +168,6 @@ func GetDeals() {
 			}
 			// if one deal is not in CSV, tweet all its info
 			if !found {
-				log.Println("ok")
 				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
 				// tweet POST
