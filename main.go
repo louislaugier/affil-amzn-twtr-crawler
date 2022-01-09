@@ -29,7 +29,5 @@ func main() {
 		}
 	}
 
-	deal.GetDeals()
-	follower.GetAmazonFollowerList()
 	schedule()
 }
