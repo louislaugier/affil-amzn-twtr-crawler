@@ -12,6 +12,8 @@ import (
 )
 
 func schedule() {
+	client := &http.Client{}
+	client.Get(os.Getenv("APP_URL") + "/foo")
 	mins := time.Now().Minute()
 	if mins%3 == 0 {
 		deal.GetDeals()
@@ -33,6 +35,9 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		schedule()
+	})
+	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("bar")
 	})
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
