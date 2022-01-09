@@ -25,7 +25,7 @@ type followers struct {
 
 // GetAmazonFollowerList gets Amazon's 50 latest Twitter followers & follows them
 func GetAmazonFollowerList() {
-	log.Println("Done 2")
+	log.Println("Starting 2")
 	// GET followers
 	config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
 	token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
@@ -41,4 +41,5 @@ func GetAmazonFollowerList() {
 			httpClient.Post("https://api.twitter.com/2/users/"+os.Getenv("TWITTER_ID")+"/following", "application/json", bytes.NewBuffer([]byte(`{"target_user_id": "`+v.ID+`"}`)))
 		}
 	}
+	log.Println("Done 2")
 }
