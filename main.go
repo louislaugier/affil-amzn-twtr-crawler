@@ -9,18 +9,16 @@ import (
 	"github.com/louislaugier/affil-amzn-twtr-crawler/follower"
 )
 
-func refresh(d time.Duration, refresh func(time.Time)) {
-	for tick := range time.Tick(d) {
-		refresh(tick)
+func schedule() {
+	mins := time.Now().Minute()
+	if mins%3 == 0 {
+		deal.GetDeals()
 	}
-}
-
-func schedule(f func(), delay time.Duration) {
-	f()
-	select {
-	case <-time.After(delay):
-		schedule(f, delay)
+	if mins%15 == 0 || mins == 0 {
+		follower.GetAmazonFollowerList()
 	}
+	time.Sleep(52 * time.Second)
+	schedule()
 }
 
 func main() {
@@ -31,6 +29,8 @@ func main() {
 		}
 	}
 
-	go schedule(deal.GetDeals, 1*time.Minute)
-	schedule(follower.GetAmazonFollowerList, 15*time.Minute)
+	deal.GetDeals()
+	follower.GetAmazonFollowerList()
+
+	schedule()
 }
