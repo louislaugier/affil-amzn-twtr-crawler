@@ -37,7 +37,7 @@ func GetAmazonFollowerList() {
 
 	// POST follow
 	for k, v := range followers.Data {
-		if k < 50 {
+		if k < 30 {
 			httpClient.Post("https://api.twitter.com/2/users/"+os.Getenv("TWITTER_ID")+"/following", "application/json", bytes.NewBuffer([]byte(`{"target_user_id": "`+v.ID+`"}`)))
 		}
 	}

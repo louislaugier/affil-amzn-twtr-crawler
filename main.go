@@ -17,8 +17,8 @@ func schedule() {
 	if mins%15 == 0 || mins == 0 {
 		follower.GetAmazonFollowerList()
 	}
-	// time.Sleep(52 * time.Second)
-	// schedule()
+	time.Sleep(52 * time.Second)
+	schedule()
 }
 
 func main() {
@@ -29,5 +29,7 @@ func main() {
 		}
 	}
 
-	schedule()
+	// schedule()
+	deal.GetDeals()
+	follower.GetAmazonFollowerList()
 }
