@@ -3,8 +3,8 @@ package follower
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"os"
-	"time"
 
 	"github.com/dghubble/oauth1"
 )
@@ -24,7 +24,8 @@ type followers struct {
 }
 
 // GetAmazonFollowerList gets Amazon's 50 latest Twitter followers & follows them
-func GetAmazonFollowerList(time.Time) {
+func GetAmazonFollowerList() {
+	log.Println("Done 2")
 	// GET followers
 	config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
 	token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))

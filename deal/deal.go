@@ -76,7 +76,8 @@ type deal struct {
 }
 
 // GetDeals updates deal list and tweets new results
-func GetDeals(time.Time) {
+func GetDeals() {
+	log.Println("Done 1")
 	c := colly.NewCollector()
 
 	defer c.Visit("https://www.amazon.com/deals")
@@ -167,7 +168,6 @@ func GetDeals(time.Time) {
 			}
 			// if one deal is not in CSV, tweet all its info
 			if !found {
-				log.Println(d)
 				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
 				// tweet POST

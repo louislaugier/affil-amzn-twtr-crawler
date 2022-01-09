@@ -15,6 +15,14 @@ func refresh(d time.Duration, refresh func(time.Time)) {
 	}
 }
 
+func schedule(f func(), delay time.Duration) {
+	f()
+	select {
+	case <-time.After(delay):
+		schedule(f, delay)
+	}
+}
+
 func main() {
 	// if no Amazon affiliate tag env variable found, load .env file
 	if os.Getenv("AMAZON_AFFILIATE_TAG") == "" {
@@ -23,12 +31,6 @@ func main() {
 		}
 	}
 
-	deal.GetDeals(time.Time{})
-
-	refresh(3*time.Minute, deal.GetDeals)
-
-	// follow bot
-	follower.GetAmazonFollowerList(time.Time{})
-
-	refresh(15*time.Minute, follower.GetAmazonFollowerList)
+	go schedule(deal.GetDeals, 1*time.Minute)
+	schedule(follower.GetAmazonFollowerList, 15*time.Minute)
 }
