@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/dghubble/oauth1"
@@ -23,23 +24,41 @@ type followers struct {
 	} `json:"meta"`
 }
 
-// GetAmazonFollowerList gets Amazon's 50 latest Twitter followers & follows them
+// GetAmazonFollowerList gets Amazon's 30 latest Twitter followers & follows them + unfollows 15 oldest followers
 func GetAmazonFollowerList() {
 	log.Println("Starting 2")
+
 	// GET followers
 	config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
 	token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
 	httpClient := config.Client(oauth1.NoContext, token)
+
 	resp, _ := httpClient.Get("https://api.twitter.com/2/users/20793816/followers")
 	defer resp.Body.Close()
-	followers := followers{}
-	json.NewDecoder(resp.Body).Decode(&followers)
+	following := followers{}
+	json.NewDecoder(resp.Body).Decode(&following)
 
 	// POST follow
-	for k, v := range followers.Data {
+	for k, v := range following.Data {
 		if k < 30 {
 			httpClient.Post("https://api.twitter.com/2/users/"+os.Getenv("TWITTER_ID")+"/following", "application/json", bytes.NewBuffer([]byte(`{"target_user_id": "`+v.ID+`"}`)))
 		}
 	}
+
+	// DELETE follow
+	resp2, _ := httpClient.Get("https://api.twitter.com/2/users/" + os.Getenv("TWITTER_ID") + "/followers?max_results=1000")
+	defer resp2.Body.Close()
+	followers := followers{}
+	json.NewDecoder(resp2.Body).Decode(&followers)
+	// reverse slice
+	for i, j := 0, len(followers.Data)-1; i < j; i, j = i+1, j-1 {
+		followers.Data[i], followers.Data[j] = followers.Data[j], followers.Data[i]
+	}
+	for k, v := range followers.Data {
+		if k < 15 {
+			http.NewRequest("DELETE", "https://api.twitter.com/2/users/"+os.Getenv("TWITTER_ID")+"/following/"+v.ID, nil)
+		}
+	}
+
 	log.Println("Done 2")
 }
