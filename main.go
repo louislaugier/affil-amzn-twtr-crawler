@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -28,6 +30,8 @@ func main() {
 			panic(err)
 		}
 	}
-
-	schedule()
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		schedule()
+	})
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
