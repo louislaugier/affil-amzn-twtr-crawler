@@ -12,7 +12,7 @@ import (
 
 func schedule() {
 	client := &http.Client{}
-	client.Get(os.Getenv("APP_URL") + "/refresh")
+	client.Get(os.Getenv("APP_URL"))
 	mins := time.Now().Minute()
 	if mins%3 == 0 {
 		deal.GetDeals()
@@ -32,11 +32,9 @@ func main() {
 		}
 	}
 
+	go schedule()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		schedule()
-	})
-	http.HandleFunc("/refresh", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("refresh")
+		log.Println("Refreshing")
 	})
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }

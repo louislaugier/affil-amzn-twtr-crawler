@@ -77,7 +77,7 @@ type deal struct {
 
 // GetDeals updates deal list and tweets new results
 func GetDeals() {
-	log.Println("Starting 1")
+	log.Println("Begin posting")
 	c := colly.NewCollector()
 
 	defer c.Visit("https://www.amazon.com/deals")
@@ -196,5 +196,5 @@ func GetDeals() {
 			w.WriteAll(rows)
 		}
 	})
-	log.Println("Done 1")
+	log.Println("Done posting")
 }
