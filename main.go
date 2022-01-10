@@ -8,6 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/louislaugier/affil-amzn-twtr-crawler/deal"
+	"github.com/louislaugier/affil-amzn-twtr-crawler/follower"
 )
 
 func schedule() {
@@ -17,9 +18,9 @@ func schedule() {
 	if mins%3 == 0 {
 		deal.GetDeals()
 	}
-	// if mins%16 == 0 || mins == 0 {
-	// 	follower.GetAmazonFollowerList()
-	// }
+	if mins%16 == 0 || mins == 0 {
+		follower.GetAmazonFollowerList()
+	}
 	time.Sleep(52 * time.Second)
 	schedule()
 }

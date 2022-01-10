@@ -24,7 +24,7 @@ type followers struct {
 	} `json:"meta"`
 }
 
-// GetAmazonFollowerList gets Amazon's 30 latest Twitter followers & follows them + unfollows 15 oldest followers
+// GetAmazonFollowerList gets Amazon's 20 latest Twitter followers & follows them + unfollows 10 oldest followers
 func GetAmazonFollowerList() {
 	log.Println("Begin following")
 
@@ -40,7 +40,7 @@ func GetAmazonFollowerList() {
 
 	// POST follow
 	for k, v := range following.Data {
-		if k < 30 {
+		if k < 20 {
 			httpClient.Post("https://api.twitter.com/2/users/"+os.Getenv("TWITTER_ID")+"/following", "application/json", bytes.NewBuffer([]byte(`{"target_user_id": "`+v.ID+`"}`)))
 		}
 	}
@@ -57,7 +57,7 @@ func GetAmazonFollowerList() {
 		followers.Data[i], followers.Data[j] = followers.Data[j], followers.Data[i]
 	}
 	for k, v := range followers.Data {
-		if k < 15 {
+		if k < 10 {
 			http.NewRequest("DELETE", "https://api.twitter.com/2/users/"+os.Getenv("TWITTER_ID")+"/following/"+v.ID, nil)
 		}
 	}
