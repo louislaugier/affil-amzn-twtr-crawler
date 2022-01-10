@@ -33,6 +33,7 @@ func main() {
 	}
 
 	go schedule()
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Refreshing")
 	})
