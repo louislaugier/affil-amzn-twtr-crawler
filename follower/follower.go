@@ -24,7 +24,7 @@ type followers struct {
 	} `json:"meta"`
 }
 
-// GetAmazonFollowerList gets Amazon's 5 latest Twitter followers & follows them + unfollows 5 oldest followers
+// GetAmazonFollowerList gets an account's 6 latest Twitter followers & follows them + unfollows 4 oldest followers
 func GetAmazonFollowerList() {
 	log.Println("Begin following")
 
@@ -33,7 +33,7 @@ func GetAmazonFollowerList() {
 	token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
 	httpClient := config.Client(oauth1.NoContext, token)
 
-	resp, _ := httpClient.Get("https://api.twitter.com/2/users/20793816/followers")
+	resp, _ := httpClient.Get("https://api.twitter.com/2/users/" + os.Getenv("FOLLOW_FOLLOWERS") + "/followers")
 	defer resp.Body.Close()
 	following := followers{}
 	json.NewDecoder(resp.Body).Decode(&following)
