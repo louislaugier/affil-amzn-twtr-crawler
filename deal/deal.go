@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -167,7 +168,7 @@ func GetDeals() {
 				}
 			}
 
-			// if one deal is not in CSV and is available, tweet all its info
+			// if one deal is not in CSV and is available, tweet all its info and add it to CSV
 			if !found {
 				c = colly.NewCollector()
 				c.OnHTML("html", func(e *colly.HTMLElement) {
@@ -197,7 +198,7 @@ func GetDeals() {
 			}
 		}
 
-		// if new rows, recreate CSV
+		// if new rows, override CSV
 		if len(rows) > prevLen {
 			os.Remove(csvFile)
 			f, _ = os.Create(csvFile)
@@ -207,5 +208,34 @@ func GetDeals() {
 		}
 		log.Println("Done posting")
 	})
+}
 
+func GetLatestDeals(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	deals := []deal{}
+	f, _ := os.Open(csvFile)
+	defer f.Close()
+	rows, _ := csv.NewReader(f).ReadAll()
+	for _, v := range rows {
+		minPrice, _ := strconv.ParseFloat(v[2], 64)
+		maxPrice, _ := strconv.ParseFloat(v[3], 64)
+		discountPercentage, _ := strconv.Atoi(v[4])
+		newPrice, _ := strconv.ParseFloat(v[5], 64)
+		if newPrice == 0 {
+			newPrice = minPrice
+		}
+		d := deal{
+			ID:                 v[0],
+			Title:              v[1],
+			MinPrice:           minPrice,
+			MaxPrice:           maxPrice,
+			DiscountPercentage: discountPercentage,
+			NewPrice:           newPrice,
+			URL:                v[6],
+			Type:               v[7],
+			TimeLeft:           v[8],
+		}
+		deals = append(deals, d)
+	}
+	json.NewEncoder(w).Encode(deals)
 }

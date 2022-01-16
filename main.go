@@ -38,5 +38,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Refreshing")
 	})
+	http.HandleFunc("/deals", deal.GetLatestDeals)
+
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
