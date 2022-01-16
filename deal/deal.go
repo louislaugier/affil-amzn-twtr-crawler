@@ -208,7 +208,7 @@ func GetDeals() {
 						config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
 						token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
 						httpClient := config.Client(oauth1.NoContext, token)
-						resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+dealDiscount+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+URL+`&tag=`+os.Getenv("AMAZON_AFFILIATE_TAG")+`"}`)))
+						resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+dealDiscount+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+URL+`"}`)))
 						defer resp.Body.Close()
 					}
 				})
