@@ -15,9 +15,9 @@ func schedule() {
 	client := &http.Client{}
 	client.Get(os.Getenv("APP_URL"))
 	mins := time.Now().Minute()
-	// if mins%3 == 0 {
-	deal.GetDeals()
-	// }
+	if mins%3 == 0 {
+		deal.GetDeals()
+	}
 	if mins%16 == 0 || mins == 0 {
 		follower.GetAmazonFollowerList()
 	}
