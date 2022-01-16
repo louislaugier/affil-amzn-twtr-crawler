@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dghubble/oauth1"
@@ -71,7 +72,7 @@ type deal struct {
 	MaxPrice           float64 `json:"maxPrice"`
 	DiscountPercentage int     `json:"discountPercentage"`
 	NewPrice           float64 `json:"newPrice"`
-	ImageURL           string  `json:"imageUrl"`
+	ThumbnailURL       string  `json:"thumbnailUrl"`
 	URL                string  `json:"url"`
 	Type               string  `json:"type"`
 	TimeLeft           string  `json:"timeLeft"`
@@ -83,10 +84,6 @@ func GetDeals() {
 	c := colly.NewCollector()
 
 	defer c.Visit("https://www.amazon.com/deals")
-
-	c.OnRequest(func(r *colly.Request) {
-		// fmt.Println("Visiting URL: ", r.URL)
-	})
 
 	// on Amazon Deals page load
 	c.OnHTML("html", func(e *colly.HTMLElement) {
@@ -171,19 +168,29 @@ func GetDeals() {
 
 			// if one deal is not in CSV and is available, tweet all its info and add it to CSV
 			if !found {
-				URL := ""
+				URL := d.URL + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG")
 				imgURL := ""
-				c = colly.NewCollector()
-				c.OnResponse(func(r *colly.Response) {
-					if r.Request.URL.String() != d.URL {
-						URL = r.Request.URL.String()
-					}
-				})
-				c.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
+				c2 := colly.NewCollector()
+
+				wg := sync.WaitGroup{}
+				wg.Add(1)
+
+				c2.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
 					imgURL = e.Attr("content")
 				})
-				c.OnHTML("html", func(e *colly.HTMLElement) {
-					if !strings.Contains(e.Text, "This deal is currently unavailable, but you can find more great deals on our Today’s Deals page.") {
+
+				c2.OnResponse(func(r *colly.Response) {
+					defer wg.Done()
+					if r.Request.URL.String() != d.URL {
+						URL = r.Request.URL.String() + "&tag=" + os.Getenv("AMAZON_AFFILIATE_TAG")
+					}
+
+				})
+
+				c2.OnHTML("html", func(e *colly.HTMLElement) {
+					wg.Wait()
+					// some unavailable still getting unfiltered
+					if !strings.Contains(e.Text, "unavailable") {
 						// new row for CSV
 						rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), imgURL, URL, d.Type, d.TimeLeft})
 
@@ -205,7 +212,7 @@ func GetDeals() {
 						defer resp.Body.Close()
 					}
 				})
-				c.Visit(URL + "&tag=" + os.Getenv("AMAZON_AFFILIATE_TAG"))
+				c2.Visit(d.URL)
 			}
 		}
 
@@ -242,7 +249,7 @@ func GetLatestDeals(w http.ResponseWriter, r *http.Request) {
 			MaxPrice:           maxPrice,
 			DiscountPercentage: discountPercentage,
 			NewPrice:           newPrice,
-			ImageURL:           v[6],
+			ThumbnailURL:       v[6],
 			URL:                v[7],
 			Type:               v[8],
 			TimeLeft:           v[9],
