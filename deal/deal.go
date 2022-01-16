@@ -167,33 +167,33 @@ func GetDeals() {
 				}
 			}
 
-			available := true
-			c = colly.NewCollector()
-			c.OnHTML("html", func(e *colly.HTMLElement) {
-				if strings.Contains(e.Text, "This deal is currently unavailable, but you can find more great deals on our Today’s Deals page.") {
-					available = false
-				}
-			})
-			c.Visit(d.URL + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG"))
-
 			// if one deal is not in CSV and is available, tweet all its info
-			if !found && available {
-				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
+			if !found {
+				c = colly.NewCollector()
+				c.OnHTML("html", func(e *colly.HTMLElement) {
+					if !strings.Contains(e.Text, "This deal is currently unavailable, but you can find more great deals on our Today’s Deals page.") {
+						// new row for CSV
+						rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
-				// tweet POST
-				dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only for "
-				if d.DiscountPercentage == 0 || d.NewPrice == 0 || strings.Contains(d.Title, "%") {
-					dealDiscount = ""
-				}
-				dealRange := " Deals going from $" + strconv.FormatFloat(d.MinPrice, 'f', -1, 64) + " to $" + strconv.FormatFloat(d.MaxPrice, 'f', -1, 64) + "."
-				if d.MinPrice == 0 || d.MaxPrice == 0 {
-					dealRange = ""
-				}
-				config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
-				token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
-				httpClient := config.Client(oauth1.NoContext, token)
-				resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+dealDiscount+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`?tag=`+os.Getenv("AMAZON_AFFILIATE_TAG")+`"}`)))
-				defer resp.Body.Close()
+						// tweet info
+						dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only for "
+						if d.DiscountPercentage == 0 || d.NewPrice == 0 || strings.Contains(d.Title, "%") {
+							dealDiscount = ""
+						}
+						dealRange := " Deals going from $" + strconv.FormatFloat(d.MinPrice, 'f', -1, 64) + " to $" + strconv.FormatFloat(d.MaxPrice, 'f', -1, 64) + "."
+						if d.MinPrice == 0 || d.MaxPrice == 0 {
+							dealRange = ""
+						}
+
+						// tweet POST
+						config := oauth1.NewConfig(os.Getenv("TWITTER_CONSUMER_KEY"), os.Getenv("TWITTER_CONSUMER_SECRET"))
+						token := oauth1.NewToken(os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
+						httpClient := config.Client(oauth1.NoContext, token)
+						resp, _ := httpClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewBuffer([]byte(`{"text": "`+dealDiscount+d.Title+`.`+dealRange+` Offer ends in `+d.TimeLeft+`. Deal type: `+d.Type+`. `+d.URL+`?tag=`+os.Getenv("AMAZON_AFFILIATE_TAG")+`"}`)))
+						defer resp.Body.Close()
+					}
+				})
+				c.Visit(d.URL + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG"))
 			}
 		}
 
