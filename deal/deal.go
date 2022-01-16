@@ -65,15 +65,16 @@ type rawDealList struct {
 }
 
 type deal struct {
-	ID                 string
-	Title              string
-	MinPrice           float64
-	MaxPrice           float64
-	DiscountPercentage int
-	NewPrice           float64
-	URL                string
-	Type               string
-	TimeLeft           string
+	ID                 string  `json:"id"`
+	Title              string  `json:"title"`
+	MinPrice           float64 `json:"minPrice"`
+	MaxPrice           float64 `json:"maxPrice"`
+	DiscountPercentage int     `json:"discountPercentage"`
+	NewPrice           float64 `json:"newPrice"`
+	ImageURL           string  `json:"imageUrl"`
+	URL                string  `json:"url"`
+	Type               string  `json:"type"`
+	TimeLeft           string  `json:"timeLeft"`
 }
 
 // GetDeals updates deal list and tweets new results
@@ -170,11 +171,15 @@ func GetDeals() {
 
 			// if one deal is not in CSV and is available, tweet all its info and add it to CSV
 			if !found {
+				imgURL := ""
 				c = colly.NewCollector()
+				c.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
+					imgURL = e.Attr("content")
+				})
 				c.OnHTML("html", func(e *colly.HTMLElement) {
 					if !strings.Contains(e.Text, "This deal is currently unavailable, but you can find more great deals on our Today’s Deals page.") {
 						// new row for CSV
-						rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
+						rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), imgURL, d.URL, d.Type, d.TimeLeft})
 
 						// tweet info
 						dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only for "
@@ -231,9 +236,10 @@ func GetLatestDeals(w http.ResponseWriter, r *http.Request) {
 			MaxPrice:           maxPrice,
 			DiscountPercentage: discountPercentage,
 			NewPrice:           newPrice,
-			URL:                v[6],
-			Type:               v[7],
-			TimeLeft:           v[8],
+			ImageURL:           v[6],
+			URL:                v[7],
+			Type:               v[8],
+			TimeLeft:           v[9],
 		}
 		deals = append(deals, d)
 	}
