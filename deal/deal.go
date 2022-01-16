@@ -166,8 +166,18 @@ func GetDeals() {
 					found = true
 				}
 			}
-			// if one deal is not in CSV, tweet all its info
-			if !found {
+
+			available := true
+			c = colly.NewCollector()
+			defer c.Visit(d.URL + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG"))
+			c.OnHTML("html", func(e *colly.HTMLElement) {
+				if strings.Contains(e.Text, "This deal is currently unavailable, but you can find more great deals on our Today’s Deals page.") {
+					available = false
+				}
+			})
+
+			// if one deal is not in CSV and is available, tweet all its info
+			if !found && available {
 				rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), d.URL, d.Type, d.TimeLeft})
 
 				// tweet POST
@@ -195,6 +205,7 @@ func GetDeals() {
 			w := csv.NewWriter(f)
 			w.WriteAll(rows)
 		}
+		log.Println("Done posting")
 	})
-	log.Println("Done posting")
+
 }
