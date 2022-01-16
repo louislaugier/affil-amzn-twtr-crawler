@@ -169,12 +169,12 @@ func GetDeals() {
 
 			available := true
 			c = colly.NewCollector()
-			defer c.Visit(d.URL + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG"))
 			c.OnHTML("html", func(e *colly.HTMLElement) {
 				if strings.Contains(e.Text, "This deal is currently unavailable, but you can find more great deals on our Today’s Deals page.") {
 					available = false
 				}
 			})
+			c.Visit(d.URL + "?tag=" + os.Getenv("AMAZON_AFFILIATE_TAG"))
 
 			// if one deal is not in CSV and is available, tweet all its info
 			if !found && available {
