@@ -66,16 +66,40 @@ type rawDealList struct {
 }
 
 type deal struct {
-	ID                 string  `json:"id"`
-	Title              string  `json:"title"`
-	MinPrice           float64 `json:"minPrice"`
-	MaxPrice           float64 `json:"maxPrice"`
-	DiscountPercentage int     `json:"discountPercentage"`
-	NewPrice           float64 `json:"newPrice"`
-	ThumbnailURL       string  `json:"thumbnailUrl"`
-	URL                string  `json:"url"`
-	Type               string  `json:"type"`
-	TimeLeft           string  `json:"timeLeft"`
+	ID                 string    `json:"id"`
+	Title              string    `json:"title"`
+	MinPrice           float64   `json:"minPrice"`
+	MaxPrice           float64   `json:"maxPrice"`
+	DiscountPercentage int       `json:"discountPercentage"`
+	NewPrice           float64   `json:"newPrice"`
+	ThumbnailURL       string    `json:"thumbnailUrl"`
+	URL                string    `json:"url"`
+	Type               string    `json:"type"`
+	EndDate            time.Time `json:"endDate"`
+	TimeLeft           string    `json:"timeLeft"`
+}
+
+func formatRemainingTime(tLeft int64) string {
+	days, hours, minutes, seconds := "", "", "", ""
+	if tLeft >= 86400 {
+		d := int(tLeft) / 86400
+		days = strconv.Itoa(d) + " day(s) "
+		tLeft -= int64(86400 * d)
+	}
+	if tLeft >= 3600 {
+		h := int(tLeft) / 3600
+		hours = strconv.Itoa(h) + " hour(s) "
+		tLeft -= int64(3600 * h)
+	}
+	if tLeft >= 60 {
+		m := int(tLeft) / 60
+		minutes = strconv.Itoa(m) + " minute(s) "
+		tLeft -= int64(60 * m)
+	}
+	if tLeft > 0 {
+		seconds = strconv.Itoa(int(tLeft)) + " second(s)"
+	}
+	return days + hours + minutes + seconds
 }
 
 // GetDeals updates deal list and tweets new results
@@ -118,27 +142,9 @@ func GetDeals() {
 			}
 
 			// compute remaining time for current deal
+			d.EndDate = v.Entity.Details.Entity.EndTime.Value
 			tLeft := v.Entity.Details.Entity.EndTime.Value.Unix() - time.Now().Unix()
-			days, hours, minutes, seconds := "", "", "", ""
-			if tLeft >= 86400 {
-				d := int(tLeft) / 86400
-				days = strconv.Itoa(d) + " day(s) "
-				tLeft -= int64(86400 * d)
-			}
-			if tLeft >= 3600 {
-				h := int(tLeft) / 3600
-				hours = strconv.Itoa(h) + " hour(s) "
-				tLeft -= int64(3600 * h)
-			}
-			if tLeft >= 60 {
-				m := int(tLeft) / 60
-				minutes = strconv.Itoa(m) + " minute(s) "
-				tLeft -= int64(60 * m)
-			}
-			if tLeft > 0 {
-				seconds = strconv.Itoa(int(tLeft)) + " second(s)"
-			}
-			d.TimeLeft = days + hours + minutes + seconds
+			d.TimeLeft = formatRemainingTime(tLeft)
 
 			deals = append(deals, d)
 		}
@@ -175,24 +181,24 @@ func GetDeals() {
 				wg := sync.WaitGroup{}
 				wg.Add(1)
 
-				c2.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
-					imgURL = e.Attr("content")
-				})
-
 				c2.OnResponse(func(r *colly.Response) {
 					defer wg.Done()
 					if r.Request.URL.String() != d.URL {
 						URL = r.Request.URL.String() + "&tag=" + os.Getenv("AMAZON_AFFILIATE_TAG")
 					}
+				})
 
+				c2.OnHTML(`meta[property="og:image"]`, func(e *colly.HTMLElement) {
+					imgURL = e.Attr("content")
 				})
 
 				c2.OnHTML("html", func(e *colly.HTMLElement) {
+
 					wg.Wait()
 					// some unavailable still getting unfiltered
 					if !strings.Contains(e.Text, "unavailable") {
 						// new row for CSV
-						rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), imgURL, URL, d.Type, d.TimeLeft})
+						rows = append(rows, []string{d.ID, d.Title, strconv.FormatFloat(d.MinPrice, 'f', -1, 64), strconv.FormatFloat(d.MaxPrice, 'f', -1, 64), strconv.Itoa(d.DiscountPercentage), strconv.FormatFloat(d.NewPrice, 'f', -1, 64), imgURL, URL, d.Type, d.EndDate.String(), d.TimeLeft})
 
 						// tweet info
 						dealDiscount := strconv.Itoa(d.DiscountPercentage) + "% off! " + strconv.FormatFloat(d.NewPrice, 'f', -1, 64) + "$ only for "
@@ -216,8 +222,18 @@ func GetDeals() {
 			}
 		}
 
+		newRows := [][]string{}
+		for _, v := range rows {
+			t, _ := time.Parse("2006-01-02T15:04:05", strings.Replace(strings.Replace(v[9], " +0000 UTC", "", -1), " ", "T", -1))
+			remaining := t.Unix() - time.Now().Unix()
+			if remaining > 0 {
+				newRows = append(newRows, v)
+			}
+		}
+		rows = newRows
+
 		// if new rows, override CSV
-		if len(rows) > prevLen {
+		if len(rows) != prevLen {
 			os.Remove(csvFile)
 			f, _ = os.Create(csvFile)
 			defer f.Close()
@@ -242,6 +258,11 @@ func GetLatestDeals(w http.ResponseWriter, r *http.Request) {
 		if newPrice == 0 {
 			newPrice = minPrice
 		}
+
+		t, _ := time.Parse("2006-01-02T15:04:05", strings.Replace(strings.Replace(v[9], " +0000 UTC", "", -1), " ", "T", -1))
+		remaining := t.Unix() - time.Now().Unix()
+		tLeft := formatRemainingTime(remaining)
+
 		d := deal{
 			ID:                 v[0],
 			Title:              v[1],
@@ -252,7 +273,8 @@ func GetLatestDeals(w http.ResponseWriter, r *http.Request) {
 			ThumbnailURL:       v[6],
 			URL:                v[7],
 			Type:               v[8],
-			TimeLeft:           v[9],
+			EndDate:            t,
+			TimeLeft:           tLeft,
 		}
 		deals = append(deals, d)
 	}
