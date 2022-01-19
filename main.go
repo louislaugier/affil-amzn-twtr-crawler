@@ -20,8 +20,9 @@ func schedule() {
 	// }
 	if mins%16 == 0 || mins == 0 {
 		follower.GetAmazonFollowerList()
+		client.Get(os.Getenv("CLIENT_URL"))
 	}
-	time.Sleep(44 * time.Second)
+	time.Sleep(40 * time.Second)
 	schedule()
 }
 
